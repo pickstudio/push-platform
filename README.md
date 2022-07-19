@@ -10,15 +10,16 @@ other_service => [PushPlatform]http_server => SQS => [PushPlatform]worker => SNS
 #### 1. create `.env`
 ```
 # required environment
-AWS_REGION=ap-northeast-2
-ENV=alpha
+ENV=development
 DEBUG=true
 
-HTTP_SERVER_DSN="0.0.0.0:50100"
+LOCALHOST_HTTP_DSN="0.0.0.0:50100"
+LOCALHOST_HTTP_TIMEOUT="2s"
 
-# only use at local machine. don't use on remote machines.
-AWS_ACCESS_KEY_ID=### 너네 꺼
-AWS_SECRET_ACCESS_KEY=### 너네 꺼
+# AWS Secrets keys only use local machine, not remote machines
+AWS_REGION=ap-northeast-2
+AWS_ACCESS_KEY_ID=###
+AWS_SECRET_ACCESS_KEY=###
 ```
 
 #### 2. direnv allow
