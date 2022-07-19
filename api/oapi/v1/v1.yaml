@@ -6,7 +6,7 @@ info:
     email: dydwls121200@gmail.com
   version: 0.0.1
 externalDocs:
-  description: search dictionary notion
+  description: push platform github
   url: https://github.com/pickstudio/push-platform
 servers:
   - url: http://localhost:50100/api/v1
@@ -30,7 +30,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/status'
-
   /_status:
     post:
       tags:
