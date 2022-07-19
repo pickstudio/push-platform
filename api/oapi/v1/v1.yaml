@@ -1,0 +1,185 @@
+openapi: 3.0.3
+info:
+  title: push-platform HTTP API
+  description: push platform
+  contact:
+    email: dydwls121200@gmail.com
+  version: 0.0.1
+externalDocs:
+  description: search dictionary notion
+  url: https://github.com/pickstudio/push-platform
+servers:
+  - url: http://localhost:50100/api/v1
+    description: local server
+
+tags:
+  - name: push
+    description: 푸쉬
+
+paths:
+  /_enqueue_from_dead_queue:
+    post:
+      summary: DLQ로 빠진 실패한 에러메세지들을 다시 queue에다가 집어 넣을 수 있도록 합니다.
+      description: DLQ로 빠진 실패한 에러메세지들을 다시 queue에다가 집어 넣을 수 있도록 합니다.
+      tags:
+        - push
+      responses:
+        '200':
+          description: 현재의 상황을 디스플레잉 해줄 수 있도록 합니다
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status'
+
+  /_status:
+    post:
+      tags:
+        - push
+      summary: send push message immediately
+      description: send push message immediately
+      responses:
+        '200':
+          description: 성공적으로 데이터를 가져옵니다
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status'
+  /_push:
+    post:
+      tags:
+        - push
+      summary: send push message immediately
+      description: send push message immediately
+      requestBody:
+        description:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messages:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/message'
+      responses:
+        '200':
+          description: 성공적으로 데이터를 가져옵니다
+          content:
+            application/json:
+              schema:
+                properties:
+                  _status:
+                    $ref: '#/components/schemas/status'
+
+components:
+  schemas:
+    message:
+      type: object
+      description: a message
+      required:
+        - id
+        - from
+        - send
+        - service
+        - push_token
+        - view_type
+        - view
+      properties:
+        id:
+          description: message identifier
+          type: string
+          readOnly: true
+          example: "1234-wads-234f-adfq-1234"
+
+        from:
+          description: for tracking who is send
+          type: string
+          readOnly: true
+
+        send:
+          description: send type ON_DEMAND[send immediately] RESERVED send at scheduled]
+          type: string
+          readOnly: true
+          example: ON_DEMAND
+          enum:
+            - ON_DEMAND
+            - RESERVED
+
+        service:
+          description: one of service from pickstudio
+          type: string
+          readOnly: true
+          enum:
+            - BUDDYSTOCK
+            - PICKME
+            - DIJKSTRA
+
+        push_token:
+          description: actual push token by service
+          type: string
+          readOnly: true
+
+        view_type:
+          description: view type of push message
+          type: string
+          readOnly: true
+          example: PLAIN
+          enum:
+            - PLAIN
+
+        view:
+          description: view object is actual push message format
+          type: object
+          readOnly: true
+          oneOf:
+            - $ref: '#/components/schemas/plain_view'
+
+    plain_view:
+      description: plain type push message
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        alarm:
+          type: string
+
+    status:
+      type: object
+      required:
+        - time
+        - queue_size
+        - queue_admin_url
+        - dead_queue_size
+        - dead_queue_admin_url
+        - manual
+      properties:
+        time:
+          type: string
+          readOnly: true
+          example: '2022-04-12T07:03:15Z'
+        queue_size:
+          type: number
+          readOnly: true
+          example: 10
+        queue_admin_url:
+          type: string
+          readOnly: true
+          example: 'https://naver.com'
+        dead_queue_size:
+          type: number
+          readOnly: true
+          example: 10
+        dead_queue_admin_url:
+          type: string
+          readOnly: true
+          example: 'https://naver.com'
+        manual:
+          type: string
+          readOnly: true
+          example: '이거 어떻게 쓰는지 알고싶다면?'
