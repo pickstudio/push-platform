@@ -15,6 +15,15 @@ type Config struct {
 		DSN     string        `env:"LOCALHOST_HTTP_DSN,default=0.0.0.0:50100" json:"localhost_http_dsn"`
 		Timeout time.Duration `env:"LOCALHOST_HTTP_TIMEOUT,default=2s" json:"localhost_http_timeout"`
 	}
+
+	AWSSQSQueue struct {
+		Name    string        `env:"AWS_SQS_QUEUE_NAME" json:"aws_sqs_queue_name"`
+		Timeout time.Duration `env:"AWS_SQS_QUEUE_TIMEOUT" json:"aws_sqs_queue_timeout"`
+	}
+	AWSSQSDeadLetterQueue struct {
+		Name    string        `env:"AWS_SQS_DEADLETTER_QUEUE_NAME" json:"aws_sqs_deadletter_queue_name"`
+		Timeout time.Duration `env:"AWS_SQS_DEADLETTER_QUEUE_TIMEOUT" json:"aws_sqs_deadletter_queue_timeout"`
+	}
 }
 
 func (c *Config) Self() (*Config, error) {

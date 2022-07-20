@@ -140,12 +140,21 @@ components:
       required:
         - title
         - content
+        - scheme_url
+        - alarm
+        - created_at
       properties:
         title:
           type: string
         content:
           type: string
+        thumbnail_url:
+          type: string
+        scheme_url:
+          type: string
         alarm:
+          type: string
+        created_at:
           type: string
 
     status:
