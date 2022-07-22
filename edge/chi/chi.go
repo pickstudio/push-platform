@@ -20,7 +20,8 @@ func New() chi.Router {
 	r.Use(chimiddleware.Recoverer)
 	r.Use(AccessLoggerHandler(
 		log.With().
-			Str("service", _const.Project).
+			Str(_const.KeyProject, _const.ValueProject).
+			Str(_const.KeyTeam, _const.ValuePlatform).
 			Str(_const.KeyLogType, _const.ValueAccessLog).
 			Logger(),
 	))

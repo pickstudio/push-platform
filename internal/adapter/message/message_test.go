@@ -1,9 +1,9 @@
-package sqs
+package message
 
 import (
 	"context"
 	"fmt"
-	"net/http"
+	edgesqs "github.com/pickstudio/push-platform/edge/sqs"
 	"testing"
 	"time"
 
@@ -19,8 +19,7 @@ import (
 )
 
 var (
-	cfg        config.Config
-	httpServer *http.Server
+	cfg config.Config
 )
 
 func init() {
@@ -34,8 +33,15 @@ func TestNew(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	c, err := New(
+	c, err := edgesqs.New(ctx)
+	if err != nil {
+		fmt.Println(err)
+		assert.Empty(t, err)
+		return
+	}
+	cc, err := New(
 		ctx,
+		c,
 		cfg.AWSSQSQueue.Name,
 		cfg.AWSSQSQueue.Timeout,
 		cfg.AWSSQSDeadLetterQueue.Name,
@@ -47,7 +53,7 @@ func TestNew(t *testing.T) {
 		return
 	}
 
-	sendRes, err := c.q.SendMessage(
+	sendRes, err := c.SendMessage(
 		ctx,
 		&sqs.SendMessageInput{
 			DelaySeconds: 10,
@@ -66,7 +72,7 @@ func TestNew(t *testing.T) {
 				},
 			},
 			MessageBody: aws.String("Information about the NY Times fiction bestseller for the week of 12/11/2016."),
-			QueueUrl:    aws.String(c.qDsn),
+			QueueUrl:    aws.String(cc.qDsn),
 		},
 	)
 	if err != nil {
@@ -76,11 +82,12 @@ func TestNew(t *testing.T) {
 	}
 	fmt.Println(jsoniter.MarshalToString(sendRes))
 
-	attr, err := c.q.GetQueueAttributes(
+	msgBody, err := cc.q.ReceiveMessage(
 		ctx,
-		&sqs.GetQueueAttributesInput{
-			QueueUrl:       aws.String(c.qDsn),
-			AttributeNames: []types.QueueAttributeName{"Title", "Author"},
+		&sqs.ReceiveMessageInput{
+			QueueUrl:              aws.String(cc.qDsn),
+			AttributeNames:        []types.QueueAttributeName{"QueueArn"},
+			MessageAttributeNames: []string{"Title"},
 		},
 	)
 	if err != nil {
@@ -88,6 +95,20 @@ func TestNew(t *testing.T) {
 		assert.Empty(t, err)
 		return
 	}
-	fmt.Println(jsoniter.MarshalToString(attr))
+	fmt.Println(jsoniter.MarshalToString(msgBody))
 
+	attr, err := c.GetQueueAttributes(
+		ctx,
+		&sqs.GetQueueAttributesInput{
+			AttributeNames: []types.QueueAttributeName{types.QueueAttributeNameAll},
+			QueueUrl:       aws.String(cc.qDsn),
+		},
+	)
+	if err != nil {
+		fmt.Println(err)
+		assert.Empty(t, err)
+		return
+	}
+	fmt.Println(jsoniter.MarshalToString(attr.Attributes))
+	fmt.Println(jsoniter.MarshalToString(attr.ResultMetadata))
 }

@@ -70,17 +70,37 @@ paths:
                 properties:
                   _status:
                     $ref: '#/components/schemas/status'
+                  failed_messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/failed_message'
 
 components:
   schemas:
+    failed_message:
+      type: object
+      description: a message
+      required:
+        - message
+        - error
+      properties:
+        message:
+          $ref: '#/components/schemas/message'
+
+        error:
+          description: an error each message
+          type: string
+          example: "an error each message"
+
     message:
       type: object
       description: a message
       required:
         - id
         - from
-        - send
         - service
+        - user_id
+        - device
         - push_token
         - view_type
         - view
@@ -88,41 +108,42 @@ components:
         id:
           description: message identifier
           type: string
-          readOnly: true
+          example: "1234-wads-234f-adfq-1234"
+
+        user_id:
+          description: message owner
+          type: string
           example: "1234-wads-234f-adfq-1234"
 
         from:
           description: for tracking who is send
           type: string
-          readOnly: true
-
-        send:
-          description: send type ON_DEMAND[send immediately] RESERVED send at scheduled]
-          type: string
-          readOnly: true
-          example: ON_DEMAND
-          enum:
-            - ON_DEMAND
-            - RESERVED
+          
 
         service:
           description: one of service from pickstudio
           type: string
-          readOnly: true
           enum:
             - BUDDYSTOCK
             - PICKME
             - DIJKSTRA
 
+        device:
+          description: device type to receive push message
+          type: string
+          example: IOS
+          enum:
+            - IOS
+            - ANDROID
+            - DESKTOP_CHROME
+
         push_token:
           description: actual push token by service
           type: string
-          readOnly: true
 
         view_type:
           description: view type of push message
           type: string
-          readOnly: true
           example: PLAIN
           enum:
             - PLAIN
@@ -130,7 +151,6 @@ components:
         view:
           description: view object is actual push message format
           type: object
-          readOnly: true
           oneOf:
             - $ref: '#/components/schemas/plain_view'
 
@@ -140,6 +160,7 @@ components:
       required:
         - title
         - content
+        - thumbnail_url
         - scheme_url
         - alarm
         - created_at
@@ -169,25 +190,20 @@ components:
       properties:
         time:
           type: string
-          readOnly: true
           example: '2022-04-12T07:03:15Z'
         queue_size:
           type: number
-          readOnly: true
+          
           example: 10
         queue_admin_url:
           type: string
-          readOnly: true
           example: 'https://naver.com'
         dead_queue_size:
           type: number
-          readOnly: true
           example: 10
         dead_queue_admin_url:
           type: string
-          readOnly: true
           example: 'https://naver.com'
         manual:
           type: string
-          readOnly: true
           example: '이거 어떻게 쓰는지 알고싶다면?'

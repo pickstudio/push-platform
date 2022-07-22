@@ -1,8 +1,14 @@
 package _const
 
 const (
-	Project   = "push-platform"
-	KeyEnvENV = "ENV"
+	KeyProject = "Project"
+	KeyEnv     = "Environment"
+	KeyTeam    = "Team"
+
+	ValuePlatform = "platform"
+
+	ValueProject = "push-platform"
+	KeyEnvENV    = "ENV"
 
 	ValueEnvLocal = "local"
 	ValueEnvDev   = "development"

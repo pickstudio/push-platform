@@ -6,12 +6,8 @@ package v1
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -21,10 +17,11 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// Defines values for MessageSend.
+// Defines values for MessageDevice.
 const (
-	ONDEMAND MessageSend = "ON_DEMAND"
-	RESERVED MessageSend = "RESERVED"
+	ANDROID       MessageDevice = "ANDROID"
+	DESKTOPCHROME MessageDevice = "DESKTOP_CHROME"
+	IOS           MessageDevice = "IOS"
 )
 
 // Defines values for MessageService.
@@ -40,31 +37,43 @@ const (
 )
 
 // a message
-type Message struct {
-	// for tracking who is send
-	From *string `json:"from,omitempty"`
+type FailedMessage struct {
+	// an error each message
+	Error string `json:"error"`
 
-	// message identifier
-	Id *string `json:"id,omitempty"`
-
-	// actual push token by service
-	PushToken *string `json:"push_token,omitempty"`
-
-	// send type ON_DEMAND[send immediately] RESERVED send at scheduled]
-	Send *MessageSend `json:"send,omitempty"`
-
-	// one of service from pickstudio
-	Service *MessageService `json:"service,omitempty"`
-
-	// view object is actual push message format
-	View *interface{} `json:"view,omitempty"`
-
-	// view type of push message
-	ViewType *MessageViewType `json:"view_type,omitempty"`
+	// a message
+	Message Message `json:"message"`
 }
 
-// send type ON_DEMAND[send immediately] RESERVED send at scheduled]
-type MessageSend string
+// a message
+type Message struct {
+	// device type to receive push message
+	Device MessageDevice `json:"device"`
+
+	// for tracking who is send
+	From string `json:"from"`
+
+	// message identifier
+	Id string `json:"id"`
+
+	// actual push token by service
+	PushToken string `json:"push_token"`
+
+	// one of service from pickstudio
+	Service MessageService `json:"service"`
+
+	// message owner
+	UserId string `json:"user_id"`
+
+	// view object is actual push message format
+	View interface{} `json:"view"`
+
+	// view type of push message
+	ViewType MessageViewType `json:"view_type"`
+}
+
+// device type to receive push message
+type MessageDevice string
 
 // one of service from pickstudio
 type MessageService string
@@ -74,22 +83,22 @@ type MessageViewType string
 
 // plain type push message
 type PlainView struct {
-	Alarm        string  `json:"alarm"`
-	Content      string  `json:"content"`
-	CreatedAt    string  `json:"created_at"`
-	SchemeUrl    string  `json:"scheme_url"`
-	ThumbnailUrl *string `json:"thumbnail_url,omitempty"`
-	Title        string  `json:"title"`
+	Alarm        string `json:"alarm"`
+	Content      string `json:"content"`
+	CreatedAt    string `json:"created_at"`
+	SchemeUrl    string `json:"scheme_url"`
+	ThumbnailUrl string `json:"thumbnail_url"`
+	Title        string `json:"title"`
 }
 
 // Status defines model for status.
 type Status struct {
-	DeadQueueAdminUrl *string  `json:"dead_queue_admin_url,omitempty"`
-	DeadQueueSize     *float32 `json:"dead_queue_size,omitempty"`
-	Manual            *string  `json:"manual,omitempty"`
-	QueueAdminUrl     *string  `json:"queue_admin_url,omitempty"`
-	QueueSize         *float32 `json:"queue_size,omitempty"`
-	Time              *string  `json:"time,omitempty"`
+	DeadQueueAdminUrl string  `json:"dead_queue_admin_url"`
+	DeadQueueSize     float32 `json:"dead_queue_size"`
+	Manual            string  `json:"manual"`
+	QueueAdminUrl     string  `json:"queue_admin_url"`
+	QueueSize         float32 `json:"queue_size"`
+	Time              string  `json:"time"`
 }
 
 // PostPushJSONBody defines parameters for PostPush.
@@ -99,471 +108,6 @@ type PostPushJSONBody struct {
 
 // PostPushJSONRequestBody defines body for PostPush for application/json ContentType.
 type PostPushJSONRequestBody PostPushJSONBody
-
-// RequestEditorFn  is the function signature for the RequestEditor callback function
-type RequestEditorFn func(ctx context.Context, req *http.Request) error
-
-// Doer performs HTTP requests.
-//
-// The standard http.Client implements this interface.
-type HttpRequestDoer interface {
-	Do(req *http.Request) (*http.Response, error)
-}
-
-// Client which conforms to the OpenAPI3 specification for this service.
-type Client struct {
-	// The endpoint of the server conforming to this interface, with scheme,
-	// https://api.deepmap.com for example. This can contain a path relative
-	// to the server, such as https://api.deepmap.com/dev-test, and all the
-	// paths in the swagger spec will be appended to the server.
-	Server string
-
-	// Doer for performing requests, typically a *http.Client with any
-	// customized settings, such as certificate chains.
-	Client HttpRequestDoer
-
-	// A list of callbacks for modifying requests which are generated before sending over
-	// the network.
-	RequestEditors []RequestEditorFn
-}
-
-// ClientOption allows setting custom parameters during construction
-type ClientOption func(*Client) error
-
-// Creates a new Client, with reasonable defaults
-func NewClient(server string, opts ...ClientOption) (*Client, error) {
-	// create a client with sane default values
-	client := Client{
-		Server: server,
-	}
-	// mutate client and add all optional params
-	for _, o := range opts {
-		if err := o(&client); err != nil {
-			return nil, err
-		}
-	}
-	// ensure the server URL always has a trailing slash
-	if !strings.HasSuffix(client.Server, "/") {
-		client.Server += "/"
-	}
-	// create httpClient, if not already present
-	if client.Client == nil {
-		client.Client = &http.Client{}
-	}
-	return &client, nil
-}
-
-// WithHTTPClient allows overriding the default Doer, which is
-// automatically created using http.Client. This is useful for tests.
-func WithHTTPClient(doer HttpRequestDoer) ClientOption {
-	return func(c *Client) error {
-		c.Client = doer
-		return nil
-	}
-}
-
-// WithRequestEditorFn allows setting up a callback function, which will be
-// called right before sending the request. This can be used to mutate the request.
-func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
-	return func(c *Client) error {
-		c.RequestEditors = append(c.RequestEditors, fn)
-		return nil
-	}
-}
-
-// The interface specification for the client above.
-type ClientInterface interface {
-	// PostEnqueueFromDeadQueue request
-	PostEnqueueFromDeadQueue(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PostPush request with any body
-	PostPushWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	PostPush(ctx context.Context, body PostPushJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PostStatus request
-	PostStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-}
-
-func (c *Client) PostEnqueueFromDeadQueue(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostEnqueueFromDeadQueueRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PostPushWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostPushRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PostPush(ctx context.Context, body PostPushJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostPushRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) PostStatus(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostStatusRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// NewPostEnqueueFromDeadQueueRequest generates requests for PostEnqueueFromDeadQueue
-func NewPostEnqueueFromDeadQueueRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/_enqueue_from_dead_queue")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewPostPushRequest calls the generic PostPush builder with application/json body
-func NewPostPushRequest(server string, body PostPushJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewPostPushRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewPostPushRequestWithBody generates requests for PostPush with any type of body
-func NewPostPushRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/_push")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewPostStatusRequest generates requests for PostStatus
-func NewPostStatusRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/_status")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
-	for _, r := range c.RequestEditors {
-		if err := r(ctx, req); err != nil {
-			return err
-		}
-	}
-	for _, r := range additionalEditors {
-		if err := r(ctx, req); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// ClientWithResponses builds on ClientInterface to offer response payloads
-type ClientWithResponses struct {
-	ClientInterface
-}
-
-// NewClientWithResponses creates a new ClientWithResponses, which wraps
-// Client with return type handling
-func NewClientWithResponses(server string, opts ...ClientOption) (*ClientWithResponses, error) {
-	client, err := NewClient(server, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &ClientWithResponses{client}, nil
-}
-
-// WithBaseURL overrides the baseURL.
-func WithBaseURL(baseURL string) ClientOption {
-	return func(c *Client) error {
-		newBaseURL, err := url.Parse(baseURL)
-		if err != nil {
-			return err
-		}
-		c.Server = newBaseURL.String()
-		return nil
-	}
-}
-
-// ClientWithResponsesInterface is the interface specification for the client with responses above.
-type ClientWithResponsesInterface interface {
-	// PostEnqueueFromDeadQueue request
-	PostEnqueueFromDeadQueueWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PostEnqueueFromDeadQueueResponse, error)
-
-	// PostPush request with any body
-	PostPushWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostPushResponse, error)
-
-	PostPushWithResponse(ctx context.Context, body PostPushJSONRequestBody, reqEditors ...RequestEditorFn) (*PostPushResponse, error)
-
-	// PostStatus request
-	PostStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PostStatusResponse, error)
-}
-
-type PostEnqueueFromDeadQueueResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Status
-}
-
-// Status returns HTTPResponse.Status
-func (r PostEnqueueFromDeadQueueResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PostEnqueueFromDeadQueueResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type PostPushResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		Status *Status `json:"_status,omitempty"`
-	}
-}
-
-// Status returns HTTPResponse.Status
-func (r PostPushResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PostPushResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type PostStatusResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Status
-}
-
-// Status returns HTTPResponse.Status
-func (r PostStatusResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PostStatusResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// PostEnqueueFromDeadQueueWithResponse request returning *PostEnqueueFromDeadQueueResponse
-func (c *ClientWithResponses) PostEnqueueFromDeadQueueWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PostEnqueueFromDeadQueueResponse, error) {
-	rsp, err := c.PostEnqueueFromDeadQueue(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostEnqueueFromDeadQueueResponse(rsp)
-}
-
-// PostPushWithBodyWithResponse request with arbitrary body returning *PostPushResponse
-func (c *ClientWithResponses) PostPushWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostPushResponse, error) {
-	rsp, err := c.PostPushWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostPushResponse(rsp)
-}
-
-func (c *ClientWithResponses) PostPushWithResponse(ctx context.Context, body PostPushJSONRequestBody, reqEditors ...RequestEditorFn) (*PostPushResponse, error) {
-	rsp, err := c.PostPush(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostPushResponse(rsp)
-}
-
-// PostStatusWithResponse request returning *PostStatusResponse
-func (c *ClientWithResponses) PostStatusWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PostStatusResponse, error) {
-	rsp, err := c.PostStatus(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePostStatusResponse(rsp)
-}
-
-// ParsePostEnqueueFromDeadQueueResponse parses an HTTP response from a PostEnqueueFromDeadQueueWithResponse call
-func ParsePostEnqueueFromDeadQueueResponse(rsp *http.Response) (*PostEnqueueFromDeadQueueResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PostEnqueueFromDeadQueueResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Status
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePostPushResponse parses an HTTP response from a PostPushWithResponse call
-func ParsePostPushResponse(rsp *http.Response) (*PostPushResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PostPushResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			Status *Status `json:"_status,omitempty"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePostStatusResponse parses an HTTP response from a PostStatusWithResponse call
-func ParsePostStatusResponse(rsp *http.Response) (*PostStatusResponse, error) {
-	bodyBytes, err := ioutil.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PostStatusResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Status
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -761,28 +305,28 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/8RWX08cNxD/Kpbbxz1270hUaV9akqMqzR9IoJXaCJ3Mro9zsmtvbC/kGp1E1HsgOao2",
-	"CqRUgpSoV1GkPJCGVFTNJ2J936Gy9467ZZdClCh9s+zxzG9+85ux70OPhRGjmEoB3ftQeA0cIrMMsRBo",
-	"Eeulj4XHSSQJo9CFCAyOLBhxFmEuCTZX6pyFefs640By5N0hdBEsNxggAghMfWhBjpE/TYMmdCWPsQVl",
-	"M8LQhUJyQhdhy4LEz/vrRwfEx1SSOsEcWhDfQ2EU6MvlyviF0jLyRakyfqFeQn79bknvnSdcFItGTbI7",
-	"mBak7ckYBUCbAGMCFppAYL5EPHwe3yblnFe9C7QtmL5eq05em7hevWX2SBhinyCJg+Y8uDk5O3nz68mq",
-	"4Q0gCXSd/DjA/rzOncYhdG/BYw/QgoMbcH6Um1GLcwBOc8thZhQDVh/kDnTVQUS8O0LGPmEjgC59Va1+",
-	"Mzs3ffkKtODM1OUr1yahBatTX16Znbs5oaGdCWKJ4OU8Ar0L2MJt7EmtptHSDNRRZzxEEloa7XQdurfu",
-	"w485rkMXfmQPNW/3BW9HASK0ZqK1TseVhhzgqqW7heBMSVk9g2mEmZmrE1PXs7VJt86kpKUt7saEY187",
-	"IrqNTN/1FTasW0bOo4j7rM4XpDVCQy4vc5YmdiKr7BRAAeJmDOSK6TEqMZXFZxwjif0aKj42dcK1mAeF",
-	"x7IRhwsUkeB0CyIDXHBygs/UbAg1E9nq55ZBW0SjkEjGhowsNT5Gfu1ujGNcQ35I6ADtUAUNKSPh2jZF",
-	"S5iPeaauZzbJiFtBvsMZj2XnVAc0Dhcw1w5CRGN0AonaPjh6uQ/U04Pk6T9Hf64B9WQ/ebSudleA2lg7",
-	"erWjOn8lnW6yd/DpeTC+/6zfJWFJwuwtWHEqlZJzoVSuzDmfuM64W7747Vt3o3GbQZZPPF8uq1gXx2XJ",
-	"K0zHxfck5hQFVeaJgmbVHRoFSOo5CBaJbMQL0IKG+WO6023Ntz2c37a+WhpcNY8wrTMdQfcE8kx/4hAR",
-	"7clv+suBKFfKFcf5bFFvmuoZTZ4KBx53I8zEAl/Mzc2AiZkpPaEwF+lVZ8wZK2uPLMIURQS6cHzMGRvX",
-	"cwfJhsndrmGa0qdHYW1Ip2lBJmSeoOrVG8nzLZD8vaN220B1ur21P3obW0D9/FPy64tkb121D9XuSvKk",
-	"q7bbIOl0VWcLGJ/aotM92l8BavexenoAkvZv2katbgL1bDX5sZ083wa9jb2ks5p0umPQQOdIB57y9aRn",
-	"Qk6meD/nLKxi5N8wYLWYRMSoSKdFxXEGtPenJoqigHjGk31bMDr8sunVf71v/YlklJMlorfZVs9eqO1N",
-	"oL5/0Ptlz6S7vq4edXvra8nOqnr2EPQ2DlT31AxNG4g4DBFvfmhmJVoUuvO0kOC8BmLXzPrUwpsvVOar",
-	"MPLVKqzVjPaXNjoW8hLzm29VluwT0A9q1kTiUJxVucEz2zqeAohz1DSkF4yF4TjSA6v1jpLKYq8N37Xz",
-	"aS2vNtV+efTqtdp5oLbeGJX8sK+2D3rt/eT3N+Bof0XtHKrN14W6OqtwRVIYeYjfkxhmU4//S6t+QPL6",
-	"/3/Mhfk6Z3EEzEMBSM8zj4pr2+aswYR0Lzplx7FRROylsvlU92Oc9NZ7fKgevoAWpCgcvAmwNd/6NwAA",
-	"//8JDBYXnA4AAA==",
+	"H4sIAAAAAAAC/8RXX28UNxD/Kpbbx7vs3gVU6V7awKXiGiCBpA8tQitn15cz7NqL7U24opOCeg+BS9Ui",
+	"EppKCQ3qVWkkHkIJFVX5RFnfd6jsvX97u4EgKvq28tgz8/vNb8bee9BlQcgoplLAyj0o3AYOkPmsI+Jj",
+	"zwmwEGgF6xUPC5eTUBJGYQUiMDAVYMhZiLkk2JzEnDOec4ACYwEYuY2xw/guCkIfv2WHbIbaLCQndAW2",
+	"CnAsqU85rsMK/MQaAbH6KKzBtlarADm+ExGOPVi5Acdim1RvDkOw5VvYlRMhzorbw6vEzTmRrAMdAkgG",
+	"OHYxWcUgjESKBhoFOrna/CIswJmr1evztSoswOrs4tzS/IJz8dL1+SuzOtcRYcneDD11zoJsGnXGgeTI",
+	"vU3oClhrMEAEEJh6eR6Ilz3fTxUQD1NJ6gTzVPFK5elzxTXkiWJ5+ly9iLz6naJey3OvoTuS3cY0h19X",
+	"RshP2DFbwHITCMwNtzm+BqaMI0YxYPXBUaBJASFxbwsZeYSNMX7h62r1m8Wl+YtzsAAXahfnrsxq3mtf",
+	"zS0uXZ8ZU8coaCQwd95GElujH8DPKsFrWd96FSQK1bUbJ2oQts54gCQsaPDzdVi58fYGCX1EqGOitfKa",
+	"QFucZDU3GSNpVj9NyguXZ2pX04pNljKQJxqUaFEaFY/qOyK9MOi0lJDGs+0zmAdpDHIGk7EloCYQpRsd",
+	"+YibBssUzmVUYirzbRwjiT0H5ZtNTbATcT/XLBtRsEwR8U/fQaSPcywT3CbbRqlOuk5lUuhjTWWfR6uQ",
+	"SEaGnMmZiDznToQj7CAvIHSQ/UgRDSlDUbEsilYxn3JNzTPYxtwI8h1OeSjZwwM0CpYxN+Mb0QhNRFJ7",
+	"xycvjoB6chw/+efkz02gHh/FD7fUwTpQ25snL/dV56+4040Pjz/Py+HDUbwPAEmC9C5Ytsvlon2uWCov",
+	"2Z9V7OlK6fy37+wk4yYVOQskS28hv25DWrMK0HHxXYk5RX6VuSKnuXRHhT6SekaBFSIb0bJuas3kkL5k",
+	"WfNnjUa1pY8WB0fN9UTrTEfQGkau6SccIKI9eU1vzRelcqls21+s6EVTDaOhU9OBw+6BqVjg0tLSAphZ",
+	"qOmJgrlIjtpT9lRJe2QhpigksAKnp+ypaT0nkGwY7JaDaUKfHmPOiE7TIkzILEHVy9fiZ7sg/ntfHbSB",
+	"6nR7m3/0tneB+vmn+Nfn8eGWar9WB+vx467aa4O401WdXWB86h2d7snROlAHj9STYxC3f9N71MYOUE83",
+	"4h/b8bM90Ns+jDsbcac7BU3qHOnANU9PZSbkbJLvl5wFVYy8ayZZLSYRMiqSbi7b9oD2/pRDYegT13iy",
+	"bglGR4/Idz3O+hPDKCdNRG+nrZ4+V3s7QH1/v/fLoYG7taUedntbm/H+hnr6APS2j1X3VISmDUQUBIg3",
+	"PzazEq0I3XlaSPCmTsRyzPephdePsPQ1ToIAewRJ7Ddza7Wg/SWNjoW8wLzme5UlPaL7Qc03kTgQZ35W",
+	"D6cA4hw1Dek5Y2E0jiSPcOsDJZXO3RndO2fRWmHir+bsmCf+hrLQc3Ss2i9OXr5S+/fV7hujvx+O1N5x",
+	"r30U//4GnBytq/3XaudVrmLfJYk8kY1dwf+RzBYTj//LEPiI5PV/IjAX5sGczsNnLvJBYk9dVxXLMrYG",
+	"E7Jy3i7ZtoVCYq2Wkqd0EmPSW+/Ra/XgOSxAioLBbQNbN1v/BgAA//9M6Pl9iA8AAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
