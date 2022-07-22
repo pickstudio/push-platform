@@ -7,6 +7,7 @@ import (
 	pp "github.com/pickstudio/push-platform"
 	_const "github.com/pickstudio/push-platform/const"
 	handlerhttp "github.com/pickstudio/push-platform/internal/handler/http"
+	"github.com/pickstudio/push-platform/pkg/recov"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/fs"
 	"net/http"
@@ -39,12 +40,23 @@ func init() {
 }
 
 func main() {
+
+	// fatal detection
+	defer func() {
+		if t := recover(); t != nil {
+			err := recov.RecoverFn(t)
+			if err != nil {
+				log.Error().Err(err).Str("type", "fatal").Msg("anomaly terminated")
+			}
+		}
+	}()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	sqs, err := edgesqs.New(ctx)
 	if err != nil {
-		panic(err.Error())
+		log.Panic().Err(err).Msg("sqs is not settings up")
 	}
 
 	messageAdapter, err := adaptermessage.New(
