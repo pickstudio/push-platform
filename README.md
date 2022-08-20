@@ -25,7 +25,8 @@ AWS_SECRET_ACCESS_KEY=###
 #### 2. direnv allow
 - [direnv](https://www.44bits.io/ko/post/direnv_for_managing_directory_environment) is good for backend engineers
 ``` bash
-~/Workspace/pickstudio/push-platform   main ✚ ● ?  direnv allow
+# cd {PROJECT_PATH}
+direnv allow
 # direnv: export +AWS_REGION +DEBUG +ENV +HTTP_SERVER_DSN ....
 ```
 
