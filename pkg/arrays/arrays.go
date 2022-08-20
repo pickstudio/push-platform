@@ -12,7 +12,7 @@ func Filter[T any](ary []T, f func(T, int) bool) []T {
 	n := make([]T, 0)
 	for i, item := range ary {
 		if f(item, i) {
-			n[i] = item
+			n = append(n, item)
 		}
 	}
 	return n

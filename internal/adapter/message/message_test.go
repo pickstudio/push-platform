@@ -3,9 +3,10 @@ package message
 import (
 	"context"
 	"fmt"
-	edgesqs "github.com/pickstudio/push-platform/edge/sqs"
 	"testing"
 	"time"
+
+	edgesqs "github.com/pickstudio/push-platform/edge/sqs"
 
 	"github.com/Netflix/go-env"
 	"github.com/aws/aws-sdk-go-v2/aws"

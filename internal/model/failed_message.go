@@ -13,3 +13,10 @@ func (m *FailedMessage) ToOAPI() *oapiv1.FailedMessage {
 		Error:   m.Error,
 	}
 }
+
+func MessageWithError(msg *Message, err error) *FailedMessage {
+	return &FailedMessage{
+		Message: msg,
+		Error:   err.Error(),
+	}
+}

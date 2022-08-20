@@ -1,8 +1,9 @@
 package v1
 
 import (
-	jsoniter "github.com/json-iterator/go"
 	"net/http"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 type PostPushResponse struct {
@@ -10,7 +11,7 @@ type PostPushResponse struct {
 	FailedMessage []*FailedMessage `json:"failed_message"`
 }
 
-func (res *PostPushResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (res *PostPushResponse) Render(w http.ResponseWriter, _ *http.Request) error {
 	w.WriteHeader(StatusOK)
 	w.Header().Set(HeaderContentType, MIMEApplicationJSONCharsetUTF8)
 
@@ -18,6 +19,6 @@ func (res *PostPushResponse) Render(w http.ResponseWriter, r *http.Request) erro
 	if err != nil {
 		return err
 	}
-	w.Write(b)
+	_, _ = w.Write(b)
 	return nil
 }

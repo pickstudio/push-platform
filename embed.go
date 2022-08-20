@@ -2,7 +2,7 @@ package pushplatform
 
 import "embed"
 
-// Static is a collection of pre-built static files for swagger web ui.
+// StaticSwaggerUI Static is a collection of pre-built static files for swagger web ui.
 //go:embed static/swagger-ui
 var StaticSwaggerUI embed.FS
 

@@ -6,36 +6,37 @@ import (
 )
 
 var (
-	ErrParsingMessageIdIsNotValid        = errors.New("error parsing 'message', 'id' is not valid")
-	ErrParsingMessageUserIdIsNotValid    = errors.New("error parsing 'message', 'user_id' is not valid")
-	ErrParsingMessageFromIsNotValid      = errors.New("error parsing 'message', 'from' is not valid")
-	ErrParsingMessageServiceIsNotValid   = errors.New("error parsing 'message', 'service' is not valid")
-	ErrParsingMessageDeviceIsNotValid    = errors.New("error parsing 'message', 'device' is not valid")
-	ErrParsingMessagePushTokenIsNotValid = errors.New("error parsing 'message', 'push_token' is not valid")
-	ErrParsingMessageViewTypeIsNotValid  = errors.New("error parsing 'message', 'view_type' is not valid")
-	ErrParsingMessageViewIsNotValid      = errors.New("error parsing 'message', 'view' is not valid")
+	ErrParsingMessageIDIsNotValid        = errors.New("model: error parsing 'message', 'id' is not valid")
+	ErrParsingMessageUserIDIsNotValid    = errors.New("model: error parsing 'message', 'user_id' is not valid")
+	ErrParsingMessageFromIsNotValid      = errors.New("model: error parsing 'message', 'from' is not valid")
+	ErrParsingMessageServiceIsNotValid   = errors.New("model: error parsing 'message', 'service' is not valid")
+	ErrParsingMessageDeviceIsNotValid    = errors.New("model: error parsing 'message', 'device' is not valid")
+	ErrParsingMessagePushTokenIsNotValid = errors.New("model: error parsing 'message', 'push_token' is not valid")
+	ErrParsingMessageViewTypeIsNotValid  = errors.New("model: error parsing 'message', 'view_type' is not valid")
+	ErrParsingMessageViewIsNotValid      = errors.New("model: error parsing 'message', 'view' is not valid")
 )
 
 type Message struct {
-	//Id  message identifier
-	Id string `json:"id,omitempty"`
-	// From for tracking who is send
+	// ID  message identifier.
+	ID string `json:"id,omitempty"`
+	// From for tracking who is send.
 	From string `json:"from,omitempty"`
 
-	//Service one of service from pickstudio
+	// Service one of service from pickstudio.
 	Service MessageService `json:"service,omitempty"`
-	// UserId message owner
-	UserId string `json:"user_id,omitempty"`
+	// UserID message owner.
+	UserID string `json:"user_id,omitempty"`
 
-	// Device type to receive push message
+	// Device type to receive push message.
 	Device MessageDevice `json:"device,omitempty"`
-	//PushToken actual push token by service
+	// PushToken actual push token by service.
 	PushToken string `json:"push_token,omitempty"`
 
-	//ViewType view type of push message
+	// ViewType view type of push message.
 	ViewType MessageViewType `json:"view_type,omitempty"`
-	//PlainView view object is actual push message format
-	PlainView *PlainView `json:"view,omitempty"`
+
+	// PlainView view object is actual push message format.
+	PlainView *PlainView `json:"plain_view,omitempty"`
 }
 
 func (m *Message) ToOAPI() *oapiv1.Message {
@@ -44,11 +45,11 @@ func (m *Message) ToOAPI() *oapiv1.Message {
 		view = m.PlainView
 	}
 	return &oapiv1.Message{
-		Id:   m.Id,
+		Id:   m.ID,
 		From: m.From,
 
 		Service: m.Service.ToOAPI(),
-		UserId:  m.UserId,
+		UserId:  m.UserID,
 
 		Device:    m.Device.ToOAPI(),
 		PushToken: m.PushToken,
@@ -60,7 +61,7 @@ func (m *Message) ToOAPI() *oapiv1.Message {
 
 func ParseOAPIMessage(v *oapiv1.Message) (*Message, error) {
 	if v.Id == "" {
-		return nil, ErrParsingMessageIdIsNotValid
+		return nil, ErrParsingMessageIDIsNotValid
 	}
 	if v.From == "" {
 		return nil, ErrParsingMessageFromIsNotValid
@@ -71,7 +72,7 @@ func ParseOAPIMessage(v *oapiv1.Message) (*Message, error) {
 		return nil, ErrParsingMessageServiceIsNotValid
 	}
 	if v.UserId == "" {
-		return nil, ErrParsingMessageUserIdIsNotValid
+		return nil, ErrParsingMessageUserIDIsNotValid
 	}
 
 	device := ParseOAPIMessageDevice(v.Device)
@@ -91,11 +92,11 @@ func ParseOAPIMessage(v *oapiv1.Message) (*Message, error) {
 	}
 
 	m := &Message{
-		Id:   v.Id,
+		ID:   v.Id,
 		From: v.From,
 
 		Service: service,
-		UserId:  v.UserId,
+		UserID:  v.UserId,
 
 		Device:    device,
 		PushToken: v.PushToken,

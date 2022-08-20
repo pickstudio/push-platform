@@ -3,11 +3,12 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+
 	oapiv1 "github.com/pickstudio/push-platform/api/oapi/v1"
 	"github.com/pickstudio/push-platform/internal/model"
 	"github.com/pickstudio/push-platform/pkg/arrays"
 	"github.com/pickstudio/push-platform/pkg/er"
-	"net/http"
 
 	edgechi "github.com/pickstudio/push-platform/edge/chi"
 )
@@ -27,7 +28,7 @@ func New(messageService messageService) *handler {
 }
 
 // PostPush send push message immediately
-// (POST /_push)
+// (POST /_push).
 func (h *handler) PostPush(w http.ResponseWriter, r *http.Request) {
 	op := er.GetOperator()
 
@@ -70,11 +71,10 @@ func (h *handler) PostPush(w http.ResponseWriter, r *http.Request) {
 		FailedMessage: failedMessage,
 	}
 	_ = resBody.Render(w, r)
-	return
 }
 
 // PostStatus send push message immediately
-// (POST /_status)
+// (POST /_status).
 func (h *handler) PostStatus(w http.ResponseWriter, r *http.Request) {
 	edgechi.RenderSuccess(w, r, map[string]string{
 		"result": "_status",
@@ -82,7 +82,7 @@ func (h *handler) PostStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // PostEnqueueFromDeadQueue DLQ로 빠진 실패한 에러메세지들을 다시 queue에다가 집어 넣을 수 있도록 합니다.
-// (POST /_enqueue_from_dead_queue)
+// (POST /_enqueue_from_dead_queue).
 func (h *handler) PostEnqueueFromDeadQueue(w http.ResponseWriter, r *http.Request) {
 	edgechi.RenderSuccess(w, r, map[string]string{
 		"result": "_enqueue_from_dead_queue",

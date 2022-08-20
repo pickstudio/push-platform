@@ -3,14 +3,14 @@ package chi
 import (
 	"net/http"
 
+	"github.com/pickstudio/push-platform/constants"
+
 	chiprometheus "github.com/daangn/go-chi-prometheus"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	corsmiddleware "github.com/go-chi/cors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
-
-	_const "github.com/pickstudio/push-platform/const"
 )
 
 func New() chi.Router {
@@ -20,9 +20,9 @@ func New() chi.Router {
 	r.Use(chimiddleware.Recoverer)
 	r.Use(AccessLoggerHandler(
 		log.With().
-			Str(_const.KeyProject, _const.ValueProject).
-			Str(_const.KeyTeam, _const.ValuePlatform).
-			Str(_const.KeyLogType, _const.ValueAccessLog).
+			Str(constants.KeyProject, constants.ValueProject).
+			Str(constants.KeyTeam, constants.ValuePlatform).
+			Str(constants.KeyLogType, constants.ValueAccessLog).
 			Logger(),
 	))
 	r.Use(corsmiddleware.New(corsmiddleware.Options{

@@ -39,7 +39,7 @@ func ParseOAPIMessageService(v oapiv1.MessageService) MessageService {
 	}
 }
 
-// MessageDevice MessageDevice
+// MessageDevice MessageDevice.
 type MessageDevice string
 
 const (
@@ -75,7 +75,7 @@ func (v MessageDevice) ToOAPI() oapiv1.MessageDevice {
 	}
 }
 
-// MessageViewType MessageViewType
+// MessageViewType MessageViewType.
 type MessageViewType string
 
 const (

@@ -2,19 +2,21 @@ package main
 
 import (
 	"context"
-	xrayecs "github.com/aws/aws-xray-sdk-go/awsplugins/ecs"
-	"github.com/aws/aws-xray-sdk-go/xray"
-	pp "github.com/pickstudio/push-platform"
-	_const "github.com/pickstudio/push-platform/const"
-	handlerhttp "github.com/pickstudio/push-platform/internal/handler/http"
-	"github.com/pickstudio/push-platform/pkg/recov"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/pickstudio/push-platform/constants"
+
+	xrayecs "github.com/aws/aws-xray-sdk-go/awsplugins/ecs"
+	"github.com/aws/aws-xray-sdk-go/xray"
+	pp "github.com/pickstudio/push-platform"
+	handlerhttp "github.com/pickstudio/push-platform/internal/handler/http"
+	"github.com/pickstudio/push-platform/pkg/recov"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/Netflix/go-env"
 	"github.com/rs/zerolog/log"
@@ -64,6 +66,9 @@ func main() {
 		cfg.AWSSQSQueue.Name, cfg.AWSSQSQueue.Timeout,
 		cfg.AWSSQSDeadLetterQueue.Name, cfg.AWSSQSDeadLetterQueue.Timeout,
 	)
+	if err != nil {
+		log.Panic().Err(err).Msg("failed to inject package that adapter message.")
+	}
 	messageService := servicemessage.New(
 		messageAdapter,
 	)
@@ -74,9 +79,15 @@ func main() {
 
 	fsStatic, err := fs.Sub(pp.StaticSwaggerUI, "static/swagger-ui")
 	if err != nil {
-		log.Panic().Err(err).Msg("serve static files")
+		log.Panic().Err(err).Msg("serve swagger static files")
 	}
 	r.Mount("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.FS(fsStatic))))
+
+	pushStatic, err := fs.Sub(pp.OAPISpecYAML, "static/push")
+	if err != nil {
+		log.Panic().Err(err).Msg("serve push static files")
+	}
+	r.Mount("/push/", http.StripPrefix("/swagger/", http.FileServer(http.FS(pushStatic))))
 
 	fsSpec, err := fs.Sub(pp.OAPISpecYAML, "api/oapi")
 	if err != nil {
@@ -95,17 +106,17 @@ func main() {
 		r.Handle("/metrics", promhttp.Handler())
 
 		xrayecs.Init()
-		xray.Handler(xray.NewFixedSegmentNamer(_const.ValueProject), r)
+		xray.Handler(xray.NewFixedSegmentNamer(constants.ValueProject), r)
 	}
 
 	httpServer = &http.Server{
 		Handler: r,
-		Addr:    cfg.LocalhostHttp.DSN,
+		Addr:    cfg.LocalhostHTTP.DSN,
 	}
 
 	go func() {
-		if err := http.ListenAndServe(cfg.LocalhostHttp.DSN, r); err != nil {
-			log.Err(err).Msgf("listen: %s", cfg.LocalhostHttp.DSN)
+		if err := http.ListenAndServe(cfg.LocalhostHTTP.DSN, r); err != nil {
+			log.Err(err).Msgf("listen: %s", cfg.LocalhostHTTP.DSN)
 			panic(err)
 		}
 	}()

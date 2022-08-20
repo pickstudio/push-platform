@@ -1,10 +1,11 @@
 package model
 
 import (
+	"time"
+
 	oapiv1 "github.com/pickstudio/push-platform/api/oapi/v1"
 	"github.com/pickstudio/push-platform/pkg/er"
 	"github.com/pkg/errors"
-	"time"
 )
 
 var (
@@ -19,10 +20,14 @@ var (
 type PlainView struct {
 	Title        string    `json:"title"`
 	Content      string    `json:"content"`
-	ThumbnailUrl string    `json:"thumbnail_url"`
-	SchemeUrl    string    `json:"scheme_url"`
+	ThumbnailURL string    `json:"thumbnail_url"`
+	SchemeURL    string    `json:"scheme_url"`
 	Alarm        string    `json:"alarm"`
 	CreatedAt    time.Time `json:"created_at"`
+}
+
+func (v *PlainView) Render() error {
+	return nil
 }
 
 func ParseOAPIPlainView(v *oapiv1.PlainView) (*PlainView, error) {
@@ -51,8 +56,8 @@ func ParseOAPIPlainView(v *oapiv1.PlainView) (*PlainView, error) {
 	return &PlainView{
 		Title:        v.Title,
 		Content:      v.Content,
-		ThumbnailUrl: v.ThumbnailUrl,
-		SchemeUrl:    v.SchemeUrl,
+		ThumbnailURL: v.ThumbnailUrl,
+		SchemeURL:    v.SchemeUrl,
 		Alarm:        v.Alarm,
 		CreatedAt:    createdAt,
 	}, nil
