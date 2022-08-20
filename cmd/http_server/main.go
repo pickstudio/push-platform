@@ -83,11 +83,11 @@ func main() {
 	}
 	r.Mount("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.FS(fsStatic))))
 
-	pushStatic, err := fs.Sub(pp.OAPISpecYAML, "static/push")
+	adminStatic, err := fs.Sub(pp.StaticAdmin, "static/admin")
 	if err != nil {
 		log.Panic().Err(err).Msg("serve push static files")
 	}
-	r.Mount("/push/", http.StripPrefix("/swagger/", http.FileServer(http.FS(pushStatic))))
+	r.Mount("/admin/", http.StripPrefix("/admin/", http.FileServer(http.FS(adminStatic))))
 
 	fsSpec, err := fs.Sub(pp.OAPISpecYAML, "api/oapi")
 	if err != nil {

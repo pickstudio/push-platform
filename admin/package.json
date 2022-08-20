@@ -64,7 +64,7 @@
   },
   "scripts": {
     "start": "node scripts/start.js",
-    "build": "node scripts/build.js",
+    "build": "BUILD_PATH=../static/admin PUBLIC_URL=/admin node scripts/build.js",
     "test": "node scripts/test.js"
   },
   "eslintConfig": {
@@ -141,5 +141,6 @@
     "presets": [
       "react-app"
     ]
-  }
+  },
+  "proxy":  "http://localhost:50100"
 }

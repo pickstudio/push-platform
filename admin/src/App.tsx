@@ -1,24 +1,29 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
 
-function App() {
+const App: React.FC = () => {
+
+  const onClickToRegisterUser = React.useCallback(() => {
+    console.log('onClickToRegisterUser')
+  },[])
+
+  const onClickToSendMessageToMe = React.useCallback(() => {
+    console.log('onClickToSendMessageToMe')
+  },[])
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <h1>푸쉬 사용자로 등록되기</h1>
+      <div>
+        <button onClick={() => { onClickToRegisterUser() }}>
+          푸쉬 사용자로 등록되기
+        </button>
+      </div>
+      <h1>나에게 푸쉬 전송하기</h1>
+      <div>
+        <button onClick={() => { onClickToSendMessageToMe() }}>
+          나에게 푸쉬 전송하기
+        </button>
+      </div>
     </div>
   );
 }
