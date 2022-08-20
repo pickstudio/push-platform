@@ -81,19 +81,19 @@ func main() {
 	if err != nil {
 		log.Panic().Err(err).Msg("serve swagger static files")
 	}
-	r.Mount("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.FS(fsStatic))))
+	r.Mount("/swagger-ui", http.StripPrefix("/swagger-ui", http.FileServer(http.FS(fsStatic))))
 
 	adminStatic, err := fs.Sub(pp.StaticAdmin, "static/admin")
 	if err != nil {
 		log.Panic().Err(err).Msg("serve push static files")
 	}
-	r.Mount("/admin/", http.StripPrefix("/admin/", http.FileServer(http.FS(adminStatic))))
+	r.Mount("/admin", http.StripPrefix("/admin", http.FileServer(http.FS(adminStatic))))
 
 	fsSpec, err := fs.Sub(pp.OAPISpecYAML, "api/oapi")
 	if err != nil {
 		log.Panic().Err(err).Msg("serve api specifications")
 	}
-	r.Mount("/swagger/", http.StripPrefix("/swagger/", http.FileServer(http.FS(fsSpec))))
+	r.Mount("/swagger", http.StripPrefix("/swagger", http.FileServer(http.FS(fsSpec))))
 
 	oapiv1.HandlerWithOptions(handler, oapiv1.ChiServerOptions{
 		BaseURL:          "/api/v1",

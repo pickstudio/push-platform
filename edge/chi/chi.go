@@ -18,6 +18,8 @@ func New() chi.Router {
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.RequestID)
 	r.Use(chimiddleware.Recoverer)
+	r.Use(chimiddleware.RedirectSlashes)
+
 	r.Use(AccessLoggerHandler(
 		log.With().
 			Str(constants.KeyProject, constants.ValueProject).

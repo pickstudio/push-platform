@@ -58,3 +58,11 @@ go run cmd/e2e_test/main.go
 oapi-codegen --config=api/oapi/v1/oapi-codegen-config.yaml api/oapi/v1/v1.yaml > api/oapi/v1/v1.oapi.go
 go generate ./...
 ```
+
+#### generate admin static page
+
+``` bash
+cd admin
+yarn build
+# you can run http_server and open http://localhost:50100/admin
+```
