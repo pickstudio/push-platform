@@ -25,7 +25,8 @@ AWS_SECRET_ACCESS_KEY=###
 #### 2. direnv allow
 - [direnv](https://www.44bits.io/ko/post/direnv_for_managing_directory_environment) is good for backend engineers
 ``` bash
-~/Workspace/pickstudio/push-platform   main ✚ ● ?  direnv allow
+# cd {PROJECT_PATH}
+direnv allow
 # direnv: export +AWS_REGION +DEBUG +ENV +HTTP_SERVER_DSN ....
 ```
 
@@ -56,4 +57,12 @@ go run cmd/e2e_test/main.go
 ``` bash
 oapi-codegen --config=api/oapi/v1/oapi-codegen-config.yaml api/oapi/v1/v1.yaml > api/oapi/v1/v1.oapi.go
 go generate ./...
+```
+
+#### generate admin static page
+
+``` bash
+cd admin
+yarn build
+# you can run http_server and open http://localhost:50100/admin
 ```

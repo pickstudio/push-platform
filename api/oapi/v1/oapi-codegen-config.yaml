@@ -1,6 +1,5 @@
 package: v1
 generate:
   chi-server: true
-  client: true
   models: true
   embedded-spec: true

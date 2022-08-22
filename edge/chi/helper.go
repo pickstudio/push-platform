@@ -3,12 +3,13 @@ package chi
 import (
 	"net/http"
 
+	"github.com/pickstudio/push-platform/constants"
+
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	oapiv1 "github.com/pickstudio/push-platform/api/oapi/v1"
-	_const "github.com/pickstudio/push-platform/const"
 	"github.com/pickstudio/push-platform/pkg/er"
 )
 
@@ -16,7 +17,7 @@ type Renderer interface {
 	Render(w http.ResponseWriter, r *http.Request) error
 }
 
-// RenderSuccessWithRenderer default render method for chi
+// RenderSuccessWithRenderer default render method for chi.
 func RenderSuccessWithRenderer(w http.ResponseWriter, r *http.Request, v Renderer) {
 	if v == nil {
 		w.WriteHeader(oapiv1.StatusNoContent)
@@ -27,7 +28,7 @@ func RenderSuccessWithRenderer(w http.ResponseWriter, r *http.Request, v Rendere
 	}
 }
 
-// RenderSuccess default render method for chi
+// RenderSuccess default render method for chi.
 func RenderSuccess(w http.ResponseWriter, r *http.Request, v any) {
 	if v == nil {
 		w.WriteHeader(oapiv1.StatusNoContent)
@@ -35,12 +36,12 @@ func RenderSuccess(w http.ResponseWriter, r *http.Request, v any) {
 	}
 	b, err := jsoniter.Marshal(v)
 	if err != nil {
-		RenderError(w, r, err)
+		_ = RenderError(w, r, err)
 	}
 	w.WriteHeader(oapiv1.StatusOK)
 	_, err = w.Write(b)
 	if err != nil {
-		RenderError(w, r, err)
+		_ = RenderError(w, r, err)
 	}
 }
 
@@ -56,7 +57,7 @@ type ErrStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
-// Render default render method for chi
+// Render default render method for chi.
 func (e ErrResponse) Render(w http.ResponseWriter, _ *http.Request) error {
 	w.WriteHeader(e.HTTPStatusCode)
 	w.Header().Set(oapiv1.HeaderContentType, oapiv1.MIMEApplicationJSONCharsetUTF8)
@@ -71,7 +72,7 @@ func (e ErrResponse) Render(w http.ResponseWriter, _ *http.Request) error {
 }
 
 func RenderError(w http.ResponseWriter, r *http.Request, err error) error {
-	httpStatusCode := _const.HTTPErrorToStatusCode(er.GetNamedErr(err))
+	httpStatusCode := constants.HTTPErrorToStatusCode(er.GetNamedErr(err))
 	e := &ErrResponse{
 		HTTPStatusCode: httpStatusCode,
 		Status: ErrStatus{
